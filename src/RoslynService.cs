@@ -350,17 +350,18 @@ public partial class RoslynService
         var removed = new List<string>();
         var errors = new List<object>();
 
-        // Get all documents in solution for lookup
+        // Get all documents in solution for lookup. A single file path can map to
+        // multiple documents when it is linked/shared across projects (e.g. the same
+        // <Compile Include/Link> appears in two projects), so group by path instead of
+        // using ToDictionary, which would throw a duplicate-key ArgumentException.
+        var pathComparer = PathComparison == StringComparison.OrdinalIgnoreCase
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
         var documentsByPath = _solution.Projects
             .SelectMany(p => p.Documents)
             .Where(d => d.FilePath != null)
-            .ToDictionary(
-                d => Path.GetFullPath(d.FilePath!),
-                d => d,
-                PathComparison == StringComparison.OrdinalIgnoreCase
-                    ? StringComparer.OrdinalIgnoreCase
-                    : StringComparer.Ordinal
-            );
+            .GroupBy(d => Path.GetFullPath(d.FilePath!), pathComparer)
+            .ToDictionary(g => g.Key, g => g.ToList(), pathComparer);
 
         // Determine which files to sync
         IEnumerable<string> pathsToSync;
@@ -385,14 +386,19 @@ public partial class RoslynService
             try
             {
                 var fileExists = File.Exists(fullPath);
-                var docExists = documentsByPath.TryGetValue(fullPath, out var existingDoc);
+                var docExists = documentsByPath.TryGetValue(fullPath, out var existingDocs);
 
                 if (fileExists && docExists)
                 {
-                    // Update existing document
+                    // Update existing document(s). The same file may back several documents
+                    // when linked across projects — update the text in all of them so every
+                    // compilation reflects the change on disk.
                     var newText = await File.ReadAllTextAsync(fullPath);
                     var sourceText = SourceText.From(newText, Encoding.UTF8);
-                    _solution = _solution.WithDocumentText(existingDoc!.Id, sourceText);
+                    foreach (var existingDoc in existingDocs!)
+                    {
+                        _solution = _solution.WithDocumentText(existingDoc.Id, sourceText);
+                    }
                     updated.Add(FormatPath(fullPath));
                 }
                 else if (fileExists && !docExists)
@@ -429,8 +435,11 @@ public partial class RoslynService
                 }
                 else if (!fileExists && docExists)
                 {
-                    // Remove deleted document
-                    _solution = _solution.RemoveDocument(existingDoc!.Id);
+                    // Remove deleted document(s) across all projects that referenced it.
+                    foreach (var existingDoc in existingDocs!)
+                    {
+                        _solution = _solution.RemoveDocument(existingDoc.Id);
+                    }
                     removed.Add(FormatPath(fullPath));
                 }
                 // else: file doesn't exist and not in solution - nothing to do
