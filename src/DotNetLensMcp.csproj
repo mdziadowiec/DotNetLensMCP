@@ -8,7 +8,7 @@
     <LangVersion>14.0</LangVersion>
 
     <!-- Package metadata -->
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <Authors>Maciej Dziadowiec</Authors>
     <Copyright>Copyright (c) 2025-2026 Maciej Dziadowiec</Copyright>
     <Description>DotNetLensMcp MCP server providing AI-optimized tools for .NET C# and VB.NET semantic code analysis using Roslyn.</Description>
@@ -18,6 +18,7 @@
     <PackageTags>mcp;roslyn;csharp;vbnet;visual-basic;dotnet;code-analysis;ai;semantic-analysis</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>
+v1.0.4: Add VB.NET support to get_method_source and get_method_source_batch — previously returned VB_NOT_SUPPORTED despite being listed as supported in the docs. Now uses the Roslyn strategy pattern (MethodBlockSyntax for VB, MethodDeclarationSyntax for C#).
 v1.0.3: Fix phantom CS0102/CS0111 duplicate-definition errors on source-generator-using projects — GetProjectCompilationAsync now skips the manual generator run when the Roslyn 5 workspace already ran generators in GetCompilationAsync. Fix find_unused_code false positives — reference threshold corrected from ≤1 to ==0 (SymbolFinder.FindReferencesAsync returns only usage sites, not the declaration).
 v1.0.2: Enforce ROSLYN_TIMEOUT_SECONDS — long-running Roslyn operations (compilation, reference search) are now cancelled after the configured timeout and return a structured TIMEOUT error. Dispose MSBuildWorkspace and decompiler PE file cache on shutdown. Health check no longer silently swallows diagnostic errors.
 v1.0.1: Fix sync_documents duplicate-key crash on solutions with linked/shared source files. A file compiled by multiple projects no longer throws "An item with the same key has already been added"; its text is now updated across every project that references it.
