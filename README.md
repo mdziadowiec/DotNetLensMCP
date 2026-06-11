@@ -23,19 +23,19 @@ Built for AI coding agents — provides compiler-accurate code understanding tha
 
 ## Why Use This with Claude Code?
 
-Claude Code has native LSP support for basic navigation. DotNetLensMcp adds **deep semantic analysis**:
+Claude Code's built-in LSP covers basic navigation. DotNetLensMcp adds compiler-accurate analysis that LSP and text search cannot provide:
 
 | Capability | Native LSP | DotNetLensMcp |
 |------------|:----------:|:-------------:|
-| Go to definition | ✅ | ✅ |
-| Find references | ✅ | ✅ |
 | VB.NET symbol navigation | ❌ | ✅ |
-| Find async methods missing CancellationToken | ❌ | ✅ |
-| Impact analysis (what breaks?) | ❌ | ✅ |
+| Impact analysis — what breaks if I change this? | ❌ | ✅ |
 | Dead code detection | ❌ | ✅ |
-| Complexity metrics | ❌ | ✅ |
-| Safe refactoring with preview | ❌ | ✅ |
-| Batch operations | ❌ | ✅ |
+| Async violations (async void, .Result blocking) | ❌ | ✅ |
+| Cyclomatic complexity & nesting depth metrics | ❌ | ✅ |
+| Circular dependency detection | ❌ | ✅ |
+| Safe refactoring with preview before apply | ❌ | ✅ |
+| Decompile referenced assemblies (no source needed) | ❌ | ✅ |
+| Batch lookups in one call | ❌ | ✅ |
 
 ## Language Support
 
