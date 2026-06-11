@@ -134,8 +134,7 @@ Code quality:
 After editing files with Edit or Write tools, always call `roslyn_sync_documents` to keep the
 Roslyn workspace in sync before running further analysis tools.
 
-Most tools support both C# and VB.NET. Code generation and most refactoring tools are C# only —
-see the Language Support table for per-category details.
+VB.NET support is noted in each tool's description — tools that don't support it say so explicitly.
 ```
 
 ## Agent Responsibility: Document Synchronization
