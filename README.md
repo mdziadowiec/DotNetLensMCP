@@ -27,7 +27,6 @@ Claude Code's built-in LSP covers basic navigation. DotNetLensMcp adds compiler-
 
 | Capability | Native LSP | DotNetLensMcp |
 |------------|:----------:|:-------------:|
-| VB.NET support | ❌ | ✅ |
 | Impact analysis — what callers/types break if this changes? | ❌ | ✅ |
 | Dead code detection | ❌ | ✅ |
 | Data flow & control flow analysis | ❌ | ✅ |
