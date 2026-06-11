@@ -11,19 +11,42 @@ Built for AI coding agents — provides compiler-accurate code understanding tha
 [cs]: https://img.shields.io/badge/C%23-239120?style=flat-square&logo=csharp&logoColor=white
 [vb]: https://img.shields.io/badge/VB.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white
 
+## Features
+
+- **74 tools** — Navigation, analysis, refactoring, code generation, quality analysis, decompilation, and diagnostics
+- **C# and VB.NET support** — Navigation, analysis, quality analysis, and decompilation work across both languages; code generation and most refactoring are C# only
+- **Compiler-accurate analysis** — Powered by Roslyn; resolves semantic references, not text matches
+- **ILSpy decompilation** — Browse IL bytecode and external assembly APIs without access to source
+- **Preview mode** — Inspect refactoring changes before applying them
+- **Batch operations** — Multiple lookups in one call to reduce context usage
+- **Structured responses** — Consistent `success/error/data` format with `suggestedNextTools` to chain tools efficiently
+
+## Why Use This with Claude Code?
+
+Claude Code has native LSP support for basic navigation. DotNetLensMcp adds **deep semantic analysis**:
+
+| Capability | Native LSP | DotNetLensMcp |
+|------------|:----------:|:-------------:|
+| Go to definition | ✅ | ✅ |
+| Find references | ✅ | ✅ |
+| VB.NET symbol navigation | ❌ | ✅ |
+| Find async methods missing CancellationToken | ❌ | ✅ |
+| Impact analysis (what breaks?) | ❌ | ✅ |
+| Dead code detection | ❌ | ✅ |
+| Complexity metrics | ❌ | ✅ |
+| Safe refactoring with preview | ❌ | ✅ |
+| Batch operations | ❌ | ✅ |
+
 ## Language Support
 
 | Capability | ![C#][cs] | ![VB.NET][vb] |
 |------------|:---------:|:-------------:|
-| Navigation & symbol search | ✅ | ✅ |
-| Diagnostics & complexity | ✅ | ✅ |
+| Navigation & discovery | ✅ | ✅ |
+| Analysis | ✅ | ✅ (9/11 tools) |
+| Refactoring | ✅ | ✅ (2/15 tools) |
+| Code generation | ✅ | ❌ |
 | Quality analysis | ✅ | ✅ (8/10 tools) |
 | Decompilation | ✅ | ✅ |
-| `rename_symbol` | ✅ | ✅ |
-| All other refactoring | ✅ | ❌ |
-| Code generation | ✅ | ❌ |
-| Code actions | ✅ | ❌ |
-| Flow analysis | ✅ | ❌ |
 
 Unsupported tools return a structured `VB_NOT_SUPPORTED` error — they never crash or return misleading output.
 
@@ -91,27 +114,29 @@ Add to your project's `CLAUDE.md` to steer Claude toward the semantic tools:
 
 ```
 For .NET code analysis (C# and VB.NET), prefer DotNetLensMcp tools over native tools:
-- Use `roslyn_search_symbols` instead of Grep for finding symbols
-- Use `roslyn_get_method_source` instead of Read for viewing methods
-- Use `roslyn_find_references` for semantic (not text) references
-- Semantic tools work on both C# and VB.NET files
+
+Navigation & lookup:
+- Use `roslyn_search_symbols` instead of Grep for finding types, methods, and members by name
+- Use `roslyn_go_to_definition` to jump to any symbol's declaration
+- Use `roslyn_get_method_source` instead of Read for viewing a method body without opening the full file
+- Use `roslyn_get_type_members` to inspect all members of a type before reading its source
+
+Impact analysis:
+- Use `roslyn_find_references` for semantic (not text) references — won't miss renamed symbols
+- Use `roslyn_find_callers` before changing a method signature to see all call sites
+- Use `roslyn_analyze_change_impact` to predict what breaks before making a change
+
+Code quality:
+- Use `roslyn_find_async_violations` to detect async void / .Result blocking / fire-and-forget
+- Use `roslyn_find_disposable_misuse` to catch IDisposable variables declared without using
+- Use `roslyn_get_diagnostics` to get compiler errors/warnings for a file
+
+After editing files with Edit or Write tools, always call `roslyn_sync_documents` to keep the
+Roslyn workspace in sync before running further analysis tools.
+
+Most tools support both C# and VB.NET. Code generation and most refactoring tools are C# only —
+see the Language Support table for per-category details.
 ```
-
-### Why Use This with Claude Code?
-
-Claude Code has native LSP support for basic navigation. DotNetLensMcp adds **deep semantic analysis**:
-
-| Capability | Native LSP | DotNetLensMcp |
-|------------|:----------:|:-------------:|
-| Go to definition | ✅ | ✅ |
-| Find references | ✅ | ✅ |
-| VB.NET symbol navigation | ❌ | ✅ |
-| Find async methods missing CancellationToken | ❌ | ✅ |
-| Impact analysis (what breaks?) | ❌ | ✅ |
-| Dead code detection | ❌ | ✅ |
-| Complexity metrics | ❌ | ✅ |
-| Safe refactoring with preview | ❌ | ✅ |
-| Batch operations | ❌ | ✅ |
 
 ## Agent Responsibility: Document Synchronization
 
@@ -132,16 +157,6 @@ sync_documents(filePaths: ["src/MyClass.cs", "src/MyModule.vb"])
 # After bulk changes - sync all documents
 sync_documents()
 ```
-
-## Features
-
-- **74 Semantic Analysis Tools** — Navigation, refactoring, code generation, diagnostics, discovery, quality analysis
-- **C# and VB.NET support** — All semantic/symbol-level tools work across both languages
-- **AI-Optimized Descriptions** — Clear USAGE/OUTPUT/WORKFLOW patterns
-- **Structured Responses** — Consistent `success/error/data` format with `suggestedNextTools`
-- **Zero-Based Coordinates** — Clear warnings to prevent off-by-one errors
-- **Preview Mode** — Safe refactoring with preview before apply
-- **Batch Operations** — Multiple lookups in one call to reduce context usage
 
 ## Tool Reference
 
