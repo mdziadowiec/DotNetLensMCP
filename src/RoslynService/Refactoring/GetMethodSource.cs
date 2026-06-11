@@ -86,7 +86,7 @@ public partial class RoslynService
             );
         }
 
-        var lineSpan = location.GetLineSpan();
+        var lineSpan = methodBody.GetLocation().GetLineSpan();
         var sourceText = methodBody.ToFullString();
 
         string? bodySource = methodBody switch
