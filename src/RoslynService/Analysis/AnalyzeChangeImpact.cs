@@ -79,7 +79,8 @@ public partial class RoslynService
         }
 
         // Find all references
-        var references = await SymbolFinder.FindReferencesAsync(symbol, _solution!);
+        using var cts = CreateTimeoutCts();
+        var references = await SymbolFinder.FindReferencesAsync(symbol, _solution!, cancellationToken: cts.Token);
         var allLocations = references.SelectMany(r => r.Locations).ToList();
 
         var impactedLocations = new List<object>();

@@ -62,7 +62,8 @@ public partial class RoslynService
             .ToList();
 
         // Get derived types
-        var derivedTypes = await SymbolFinder.FindDerivedClassesAsync(typeSymbol, _solution!, transitive: false);
+        using var cts = CreateTimeoutCts();
+        var derivedTypes = await SymbolFinder.FindDerivedClassesAsync(typeSymbol, _solution!, transitive: false, cancellationToken: cts.Token);
         var allDerived = derivedTypes.ToList();
         var totalDerived = allDerived.Count;
 

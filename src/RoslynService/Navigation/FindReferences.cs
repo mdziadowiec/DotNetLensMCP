@@ -37,7 +37,8 @@ public partial class RoslynService
             );
         }
 
-        var references = await SymbolFinder.FindReferencesAsync(symbol, _solution!);
+        using var cts = CreateTimeoutCts();
+        var references = await SymbolFinder.FindReferencesAsync(symbol, _solution!, cancellationToken: cts.Token);
         var allLocations = references
             .SelectMany(r => r.Locations)
             .Where(loc => loc.Location.IsInSource)

@@ -125,6 +125,26 @@ public class SourceGeneratorTests : RoslynServiceTestBase
     }
 
     [Fact]
+    public async Task GetProjectCompilationAsync_DoesNotDuplicateGeneratedMembers()
+    {
+        // Regression test: GetProjectCompilationAsync previously re-ran generators even when
+        // the workspace-provided compilation already included their output (Roslyn 5+), causing
+        // duplicate-member errors (CS0102/CS0111/CS0121/CS0229) on every generator-using project.
+        var project = GetTestProject();
+        var compilation = await Service.GetProjectCompilationAsync(project);
+        compilation.Should().NotBeNull();
+
+        var duplicateErrors = compilation!.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error &&
+                        d.Id is "CS0102" or "CS0111" or "CS0121" or "CS0229")
+            .ToList();
+
+        duplicateErrors.Should().BeEmpty(
+            "source generator output must not be included twice — re-running generators on a " +
+            "compilation that already contains generator output duplicates every generated member");
+    }
+
+    [Fact]
     public async Task GetProjectCompilationAsync_ProjectWithoutGenerators_ReturnsBaseCompilation()
     {
         // The main DotNetLensMcp project has no source generators.

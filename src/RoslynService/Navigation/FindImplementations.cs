@@ -47,7 +47,8 @@ public partial class RoslynService
             );
         }
 
-        var implementations = await SymbolFinder.FindImplementationsAsync(typeSymbol, _solution!);
+        using var cts = CreateTimeoutCts();
+        var implementations = await SymbolFinder.FindImplementationsAsync(typeSymbol, _solution!, cancellationToken: cts.Token);
         var allImplementations = implementations.ToList();
         var totalImplementations = allImplementations.Count;
 

@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace DotNetLensMcp;
 
-public class McpServer
+public class McpServer : IDisposable
 {
     private const string ProtocolVersion = "2024-11-05";
     private static readonly string ServerVersion = typeof(McpServer).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
@@ -213,6 +213,33 @@ public class McpServer
             await LogAsync("Warning", $"Invalid tool arguments: {ex.Message}");
             return JsonRpc.CreateErrorResponse(id, JsonRpc.ErrorCodes.InvalidParams, ex.Message);
         }
+        catch (OperationCanceledException)
+        {
+            var timeoutSeconds = int.TryParse(Environment.GetEnvironmentVariable("ROSLYN_TIMEOUT_SECONDS"), out var t) ? t : 30;
+            await LogAsync("Warning", $"Tool call timed out after {timeoutSeconds}s");
+            var timeoutResult = new
+            {
+                success = false,
+                error = new
+                {
+                    Code = ErrorCodes.Timeout,
+                    Message = $"Operation timed out after {timeoutSeconds}s (ROSLYN_TIMEOUT_SECONDS)",
+                    Hint = "Increase ROSLYN_TIMEOUT_SECONDS or narrow the scope of the operation"
+                }
+            };
+            var mpcResult = new
+            {
+                content = new[]
+                {
+                    new
+                    {
+                        type = "text",
+                        text = System.Text.Json.JsonSerializer.Serialize(timeoutResult, _jsonOptions)
+                    }
+                }
+            };
+            return JsonRpc.CreateSuccessResponse(id, mpcResult);
+        }
         catch (Exception ex)
         {
             await LogAsync("Error", $"Error executing tool: {ex}");
@@ -246,4 +273,7 @@ public class McpServer
         var configuredIndex = Array.IndexOf(LogLevels, _logLevel);
         return messageIndex >= configuredIndex;
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _roslynService.Dispose();
 }

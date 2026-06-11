@@ -39,6 +39,7 @@ public partial class RoslynService
         var queue = new Queue<(IMethodSymbol sym, int remainingDepth)>();
         queue.Enqueue((rootMethod.OriginalDefinition, depth));
 
+        using var cts = CreateTimeoutCts();
         while (queue.Count > 0)
         {
             var (current, remaining) = queue.Dequeue();
@@ -50,7 +51,7 @@ public partial class RoslynService
                 await ExpandCalleesAsync(current, currentFqn, remaining, nodes, edges, visited, cycleNodes, queue);
 
             if (direction is "callers" or "both")
-                await ExpandCallersAsync(current, currentFqn, remaining, nodes, edges, visited, cycleNodes, queue);
+                await ExpandCallersAsync(current, currentFqn, remaining, nodes, edges, visited, cycleNodes, queue, cts.Token);
         }
 
         return CreateSuccessResponse(
@@ -131,9 +132,10 @@ public partial class RoslynService
         List<object> edges,
         HashSet<string> visited,
         HashSet<string> cycleNodes,
-        Queue<(IMethodSymbol, int)> queue)
+        Queue<(IMethodSymbol, int)> queue,
+        CancellationToken cancellationToken = default)
     {
-        var callers = await SymbolFinder.FindCallersAsync(method, _solution!);
+        var callers = await SymbolFinder.FindCallersAsync(method, _solution!, cancellationToken: cancellationToken);
 
         foreach (var caller in callers)
         {

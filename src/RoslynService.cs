@@ -8,7 +8,7 @@ using System.Text;
 
 namespace DotNetLensMcp;
 
-public partial class RoslynService
+public partial class RoslynService : IDisposable
 {
     private MSBuildWorkspace? _workspace;
     private Solution? _solution;
@@ -80,6 +80,19 @@ public partial class RoslynService
         _timeoutSeconds = int.TryParse(Environment.GetEnvironmentVariable("ROSLYN_TIMEOUT_SECONDS"), out var timeout)
             ? timeout : 30;
         _useAbsolutePaths = Environment.GetEnvironmentVariable("DOTNETLENS_ABSOLUTE_PATHS")?.ToLower() == "true";
+    }
+
+    /// <summary>
+    /// Creates a <see cref="CancellationTokenSource"/> that cancels after <see cref="_timeoutSeconds"/>.
+    /// Use one per top-level tool invocation to bound the whole operation.
+    /// </summary>
+    private CancellationTokenSource CreateTimeoutCts() => new(TimeSpan.FromSeconds(_timeoutSeconds));
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _workspace?.Dispose();
+        _peFileCache?.Dispose();
     }
 
     // Helper method for glob pattern matching (supports * and ? wildcards)
@@ -541,9 +554,10 @@ public partial class RoslynService
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors during health check diagnostics
+            // Diagnostic errors must not prevent the health check from returning.
+            Console.Error.WriteLine($"[Warning] Health check diagnostics failed: {ex.Message}");
         }
 
         var projectCount = _solution.ProjectIds.Count;
@@ -789,13 +803,24 @@ public partial class RoslynService
     /// <summary>Test-only accessor for the loaded solution. Do not use outside tests.</summary>
     internal Solution? GetSolutionForTesting() => _solution;
 
-    internal async Task<Compilation?> GetProjectCompilationAsync(Project project)
+    internal async Task<Compilation?> GetProjectCompilationAsync(Project project, CancellationToken cancellationToken = default)
     {
         if (_compilationCache.TryGetValue(project.Id, out var cached))
             return cached;
 
-        var baseCompilation = await project.GetCompilationAsync();
+        var baseCompilation = await project.GetCompilationAsync(cancellationToken);
         if (baseCompilation == null) return null;
+
+        // Roslyn 5+ MSBuildWorkspace already runs source generators inside GetCompilationAsync.
+        // Detect this by checking for existing generated documents. If they exist, use the
+        // workspace-provided compilation directly — re-running generators would duplicate all
+        // generated member definitions and cause phantom CS0102/CS0111/CS0121/CS0229 errors.
+        var existingGeneratedDocs = await project.GetSourceGeneratedDocumentsAsync(cancellationToken);
+        if (existingGeneratedDocs.Any())
+        {
+            _compilationCache[project.Id] = baseCompilation;
+            return baseCompilation;
+        }
 
         var generators = project.AnalyzerReferences
             .SelectMany(ar => ar.GetGenerators(project.Language))

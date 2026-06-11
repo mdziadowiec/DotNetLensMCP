@@ -14,6 +14,7 @@ public partial class RoslynService
     {
         EnsureSolutionLoaded();
 
+        using var cts = CreateTimeoutCts();
         var unusedSymbols = new List<object>();
         var maxResultsToReturn = maxResults ?? 50; // Default to 50 to prevent huge outputs
 
@@ -71,7 +72,7 @@ public partial class RoslynService
                         continue;
 
                     // Find references to this type
-                    var references = await SymbolFinder.FindReferencesAsync(typeSymbol, _solution!);
+                    var references = await SymbolFinder.FindReferencesAsync(typeSymbol, _solution!, cancellationToken: cts.Token);
                     var referenceCount = references.SelectMany(r => r.Locations).Count();
 
                     // For types, also check if any members are referenced
@@ -88,10 +89,10 @@ public partial class RoslynService
                                 member is IMethodSymbol { MethodKind: MethodKind.Constructor or MethodKind.StaticConstructor })
                                 continue;
 
-                            var memberRefs = await SymbolFinder.FindReferencesAsync(member, _solution!);
+                            var memberRefs = await SymbolFinder.FindReferencesAsync(member, _solution!, cancellationToken: cts.Token);
                             var memberRefCount = memberRefs.SelectMany(r => r.Locations).Count();
 
-                            if (memberRefCount > 1) // Member is referenced (beyond its declaration)
+                            if (memberRefCount > 0) // Member is referenced
                             {
                                 hasReferencedMembers = true;
                                 break; // No need to check other members
@@ -99,8 +100,9 @@ public partial class RoslynService
                         }
                     }
 
-                    // If no references to type AND no references to any members, it's unused
-                    if (referenceCount <= 1 && !hasReferencedMembers) // 1 = just the declaration
+                    // SymbolFinder.FindReferencesAsync returns only usage sites (not the declaration).
+                    // A count of 0 means truly unreferenced; 1 means used exactly once (not unused).
+                    if (referenceCount == 0 && !hasReferencedMembers)
                     {
                         var location = typeSymbol.Locations.FirstOrDefault(loc => loc.IsInSource);
                         if (location != null)
@@ -163,10 +165,10 @@ public partial class RoslynService
                         continue;
 
                     // Find references
-                    var references = await SymbolFinder.FindReferencesAsync(member, _solution!);
+                    var references = await SymbolFinder.FindReferencesAsync(member, _solution!, cancellationToken: cts.Token);
                     var referenceCount = references.SelectMany(r => r.Locations).Count();
 
-                    if (referenceCount <= 1)
+                    if (referenceCount == 0)
                     {
                         var location = member.Locations.FirstOrDefault(loc => loc.IsInSource);
                         if (location != null)

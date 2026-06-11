@@ -161,7 +161,8 @@ public partial class RoslynService
         var newSignature = $"{methodSymbol.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {methodSymbol.Name}({string.Join(", ", newParamStrings)})";
 
         // Find all references (call sites)
-        var references = await SymbolFinder.FindReferencesAsync(methodSymbol, _solution);
+        using var cts = CreateTimeoutCts();
+        var references = await SymbolFinder.FindReferencesAsync(methodSymbol, _solution, cancellationToken: cts.Token);
         var callSites = new List<object>();
         var filesAffected = new HashSet<string>();
 

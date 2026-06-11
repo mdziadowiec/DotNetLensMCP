@@ -15,5 +15,5 @@ catch (InvalidOperationException ex) when (ex.Message.Contains("No instances"))
 }
 
 // Create and run the MCP server
-var server = new McpServer();
+using var server = new McpServer();
 await server.RunAsync();

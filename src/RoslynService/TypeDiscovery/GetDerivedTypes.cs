@@ -34,8 +34,9 @@ public partial class RoslynService
             );
         }
 
+        using var cts = CreateTimeoutCts();
         var derivedTypes = await SymbolFinder.FindDerivedClassesAsync(
-            baseType, _solution!, transitive: includeTransitive);
+            baseType, _solution!, transitive: includeTransitive, cancellationToken: cts.Token);
 
         var derivedList = derivedTypes.ToList();
         var totalCount = derivedList.Count;

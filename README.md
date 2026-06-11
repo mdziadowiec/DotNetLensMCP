@@ -55,7 +55,7 @@ dotnet publish/DotNetLensMcp.dll
 | `DOTNET_SOLUTION_PATH` | Path to `.sln` or `.slnx` file to auto-load on startup | None (must call `load_solution`) |
 | `DOTNETLENS_ABSOLUTE_PATHS` | Use absolute paths instead of relative | `false` (relative paths save tokens) |
 | `ROSLYN_LOG_LEVEL` | Logging verbosity: `Trace`, `Debug`, `Information`, `Warning`, `Error` | `Information` |
-| `ROSLYN_TIMEOUT_SECONDS` | Timeout for long-running operations | `30` |
+| `ROSLYN_TIMEOUT_SECONDS` | Timeout for long-running Roslyn operations (compilation, reference search); returns a structured `TIMEOUT` error when exceeded | `30` |
 | `ROSLYN_MAX_DIAGNOSTICS` | Maximum diagnostics to return | `100` |
 | `ROSLYN_ENABLE_SEMANTIC_CACHE` | Enable semantic model caching | `true` (set to `false` to disable) |
 
@@ -185,7 +185,7 @@ sync_documents()
 | `analyze_control_flow` | Branching/reachability | ✅ | ❌ |
 | `validate_code` | Compile check without writing | ✅ | ✅ |
 
-### Refactoring (14 tools)
+### Refactoring (15 tools)
 
 | Tool | Description | ![C#][cs] | ![VB.NET][vb] |
 |------|-------------|:---------:|:-------------:|
@@ -204,12 +204,13 @@ sync_documents()
 | `extract_variable` | Extract expression to variable | ✅ | ❌ |
 | `get_code_fixes` / `apply_code_fix` | Diagnostic-driven fixes | ✅ | ❌ |
 
-### Code Generation (2 tools)
+### Code Generation (3 tools)
 
 | Tool | Description | ![C#][cs] | ![VB.NET][vb] |
 |------|-------------|:---------:|:-------------:|
 | `add_null_checks` | Generate ArgumentNullException guards | ✅ | ❌ |
 | `generate_equality_members` | Equals/GetHashCode/operators | ✅ | ❌ |
+| `generate_constructor` | Generate constructor from fields/properties | ✅ | ❌ |
 
 ### Compound Tools (6 tools)
 
@@ -251,7 +252,7 @@ sync_documents()
 | `peek_il` | Disassemble a method from a referenced assembly to MSIL bytecode | ✅ | ✅ |
 | `inspect_external_assembly` | Browse the public API surface of any referenced assembly | ✅ | ✅ |
 
-### Infrastructure (10 tools)
+### Infrastructure (8 tools)
 
 | Tool | Description | ![C#][cs] | ![VB.NET][vb] |
 |------|-------------|:---------:|:-------------:|
@@ -287,18 +288,20 @@ Microsoft.CodeAnalysis (Roslyn)
 
 ### Project Structure
 
-| File | Purpose |
-|------|---------|
+| File / Folder | Purpose |
+|--------------|---------|
 | `src/RoslynService.cs` | Core workspace service, language helpers, compilation cache, source-generator handling |
-| `src/RoslynService.Navigation.cs` | Symbol navigation (C#+VB) |
-| `src/RoslynService.Analysis.cs` | Diagnostics, project structure, organize/format tools |
-| `src/RoslynService.Refactoring.cs` | Refactoring tools (C# only, guarded) |
-| `src/RoslynService.CodeActions.cs` | Code actions (C# only, guarded) |
-| `src/RoslynService.CodeGeneration.cs` | Code generation (C# only, guarded) |
-| `src/RoslynService.Compound.cs` | Data/control-flow tools (C# only, guarded) |
-| `src/RoslynService.TypeDiscovery.cs` | Type/member queries (C#+VB) |
-| `src/RoslynService.Discovery.cs` | Discovery tools for attributes, DI, reflection, packages, and source generators |
+| `src/RoslynService/Language/` | C#/VB strategy-pattern implementations; language-specific helpers |
+| `src/RoslynService/Navigation/` | Symbol navigation tools (C#+VB) |
+| `src/RoslynService/Analysis/` | Diagnostics, project structure, organize/format tools |
+| `src/RoslynService/Refactoring/` | Refactoring tools (C# only, guarded) |
+| `src/RoslynService/CodeActions/` | Code actions (C# only, guarded) |
+| `src/RoslynService/CodeGeneration/` | Code generation tools (C# only, guarded) |
+| `src/RoslynService/Compound/` | Data/control-flow compound tools (C# only, guarded) |
+| `src/RoslynService/TypeDiscovery/` | Type/member queries (C#+VB) |
+| `src/RoslynService/Discovery/` | Discovery tools for attributes, DI, reflection, packages, and source generators |
 | `src/RoslynService/QualityAnalysis/` | Quality analysis tools — large classes, god objects, naming, async/disposable violations, call graph, etc. |
+| `src/RoslynService/Decompilation/` | ILSpy-backed tools — peek IL, inspect external assembly; `PEFileCache`, `IlDisassemblerAdapter` helpers |
 | `src/McpServer.cs` | MCP protocol loop and JSON-RPC handling |
 | `src/ToolCatalog.cs` | MCP tool definitions and input schemas |
 | `src/McpToolCallHandler.cs` | Tool routing and argument mapping |
@@ -306,7 +309,7 @@ Microsoft.CodeAnalysis (Roslyn)
 
 ### Adding New Tools
 
-1. **Add method to the appropriate `RoslynService.*.cs` partial class**:
+1. **Add method to the appropriate `src/RoslynService/<Category>/` file**:
 ```csharp
 public async Task<object> YourToolAsync(string filePath, int? param = null)
 {

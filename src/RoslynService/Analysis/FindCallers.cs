@@ -48,7 +48,8 @@ public partial class RoslynService
             );
         }
 
-        var callers = await SymbolFinder.FindCallersAsync(symbol, _solution!);
+        using var cts = CreateTimeoutCts();
+        var callers = await SymbolFinder.FindCallersAsync(symbol, _solution!, cancellationToken: cts.Token);
 
         // First count total
         var totalCallers = 0;

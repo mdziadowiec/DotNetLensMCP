@@ -68,7 +68,8 @@ public partial class RoslynService
         var totalCallers = 0;
         if (includeCallers)
         {
-            var callerSymbols = await SymbolFinder.FindCallersAsync(method, _solution!);
+            using var cts = CreateTimeoutCts();
+            var callerSymbols = await SymbolFinder.FindCallersAsync(method, _solution!, cancellationToken: cts.Token);
             var callerList = callerSymbols.ToList();
             totalCallers = callerList.Count;
 
