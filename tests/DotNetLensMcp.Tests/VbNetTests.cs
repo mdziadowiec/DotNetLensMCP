@@ -218,6 +218,12 @@ public class VbNetTests : IAsyncLifetime
         var data = GetData(result);
         data["methodName"]?.Value<string>().Should().Be("DoWork");
         data["fullSource"]?.Value<string>().Should().Contain("DoWork");
+
+        var location = data["location"];
+        location!["startLine"]!.Value<int>().Should().Be(12, "DoWork starts on line 13 (0-indexed: 12)");
+        location["endLine"]!.Value<int>().Should().Be(14, "DoWork ends on line 15 (0-indexed: 14)");
+        location["startLine"]!.Value<int>().Should().BeLessThan(location["endLine"]!.Value<int>(),
+            "startLine must be less than endLine for a multi-line method");
     }
 
     [Fact]
@@ -228,6 +234,10 @@ public class VbNetTests : IAsyncLifetime
         var data = GetData(result);
         data["methodName"]?.Value<string>().Should().Be("GetValue");
         data["bodySource"]?.Value<string>().Should().NotBeNullOrEmpty();
+
+        var location = data["location"];
+        location!["startLine"]!.Value<int>().Should().Be(16, "GetValue starts on line 17 (0-indexed: 16)");
+        location["endLine"]!.Value<int>().Should().Be(18, "GetValue ends on line 19 (0-indexed: 18)");
     }
 
     [Fact]
