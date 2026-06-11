@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using VBSyntax = Microsoft.CodeAnalysis.VisualBasic.Syntax;
 
 namespace DotNetLensMcp;
 
@@ -63,10 +64,6 @@ public partial class RoslynService
             );
         }
 
-        if (await GetCSharpOnlyToolErrorAsync(location.SourceTree?.FilePath, "get_method_source") is { } unsupportedLanguageError)
-            return unsupportedLanguageError;
-
-        // Get the syntax node
         var syntaxTree = location.SourceTree;
         if (syntaxTree == null)
         {
@@ -78,11 +75,9 @@ public partial class RoslynService
         }
 
         var root = await syntaxTree.GetRootAsync();
-        var node = root.FindNode(location.SourceSpan);
-
-        // Find the method declaration
-        var methodDecl = node.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-        if (methodDecl == null)
+        bool isVb = syntaxTree.Options.Language == Microsoft.CodeAnalysis.LanguageNames.VisualBasic;
+        var methodBody = SyntaxStrategy(isVb).FindMethodBody(root, location.SourceSpan);
+        if (methodBody == null)
         {
             return CreateErrorResponse(
                 ErrorCodes.AnalysisFailed,
@@ -92,18 +87,15 @@ public partial class RoslynService
         }
 
         var lineSpan = location.GetLineSpan();
-        var sourceText = methodDecl.ToFullString();
+        var sourceText = methodBody.ToFullString();
 
-        // Also get just the body if available
-        string? bodySource = null;
-        if (methodDecl.Body != null)
+        string? bodySource = methodBody switch
         {
-            bodySource = methodDecl.Body.ToFullString();
-        }
-        else if (methodDecl.ExpressionBody != null)
-        {
-            bodySource = methodDecl.ExpressionBody.ToFullString();
-        }
+            MethodDeclarationSyntax cs when cs.Body != null           => cs.Body.ToFullString(),
+            MethodDeclarationSyntax cs when cs.ExpressionBody != null => cs.ExpressionBody.ToFullString(),
+            VBSyntax.MethodBlockSyntax vb                             => string.Concat(vb.Statements.Select(s => s.ToFullString())),
+            _ => null
+        };
 
         return CreateSuccessResponse(
             data: new

@@ -211,10 +211,23 @@ public class VbNetTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetMethodSource_VbMethod_ReturnsNotSupportedError()
+    public async Task GetMethodSource_VbSub_ReturnsSource()
     {
         var result = await _service.GetMethodSourceAsync("TestService", "DoWork");
-        AssertError(result, "VB_NOT_SUPPORTED");
+        AssertSuccess(result);
+        var data = GetData(result);
+        data["methodName"]?.Value<string>().Should().Be("DoWork");
+        data["fullSource"]?.Value<string>().Should().Contain("DoWork");
+    }
+
+    [Fact]
+    public async Task GetMethodSource_VbFunction_ReturnsSourceWithBody()
+    {
+        var result = await _service.GetMethodSourceAsync("TestService", "GetValue");
+        AssertSuccess(result);
+        var data = GetData(result);
+        data["methodName"]?.Value<string>().Should().Be("GetValue");
+        data["bodySource"]?.Value<string>().Should().NotBeNullOrEmpty();
     }
 
     [Fact]
