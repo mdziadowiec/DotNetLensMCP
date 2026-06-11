@@ -27,14 +27,21 @@ Claude Code's built-in LSP covers basic navigation. DotNetLensMcp adds compiler-
 
 | Capability | Native LSP | DotNetLensMcp |
 |------------|:----------:|:-------------:|
-| VB.NET symbol navigation | ❌ | ✅ |
-| Impact analysis — what breaks if I change this? | ❌ | ✅ |
+| VB.NET support | ❌ | ✅ |
+| Impact analysis — what callers/types break if this changes? | ❌ | ✅ |
 | Dead code detection | ❌ | ✅ |
-| Async violations (async void, .Result blocking) | ❌ | ✅ |
-| Cyclomatic complexity & nesting depth metrics | ❌ | ✅ |
+| Data flow & control flow analysis | ❌ | ✅ |
+| Complexity metrics (cyclomatic, cognitive, nesting depth) | ❌ | ✅ |
 | Circular dependency detection | ❌ | ✅ |
+| Call graph traversal | ❌ | ✅ |
+| Async violations (async void, .Result/.Wait() blocking) | ❌ | ✅ |
+| IDisposable misuse detection | ❌ | ✅ |
+| Naming violations, god objects & large class detection | ❌ | ✅ |
 | Safe refactoring with preview before apply | ❌ | ✅ |
-| Decompile referenced assemblies (no source needed) | ❌ | ✅ |
+| Code generation (constructors, equality members, null checks) | ❌ | ✅ |
+| IL decompilation & external assembly inspection | ❌ | ✅ |
+| Source generator introspection | ❌ | ✅ |
+| DI registration scanning | ❌ | ✅ |
 | Batch lookups in one call | ❌ | ✅ |
 
 ## Language Support
